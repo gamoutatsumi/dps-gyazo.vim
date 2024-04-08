@@ -1,4 +1,4 @@
-import { assert, clippy, Denops, fn, is, readAll, vars } from "./deps.ts";
+import { assert, clippy, Denops, fn, is, vars } from "./deps.ts";
 import argsParser from "https://deno.land/x/yargs_parser@yargs-parser-v20.2.9-deno/deno.ts";
 
 const argsParseOption = {
@@ -8,13 +8,13 @@ const argsParseOption = {
 export function main(denops: Denops): Promise<void> {
   denops.dispatcher = {
     async upload(...args): Promise<void> {
-      const homePath = await fn.expand(denops, "~") as string;
+      const homePath = (await fn.expand(denops, "~")) as string;
 
       let filePath;
       const parsedArgs = argsParser(args, argsParseOption);
 
       let yankReg = "*";
-      if (await fn.has(denops, "linux") || await fn.has(denops, "unix")) {
+      if ((await fn.has(denops, "linux")) || (await fn.has(denops, "unix"))) {
         yankReg = "+";
       }
 
@@ -25,24 +25,18 @@ export function main(denops: Denops): Promise<void> {
       }
       assert(token, is.String);
 
-      const toInsert = (typeof parsedArgs.m === "boolean")
+      const toInsert = typeof parsedArgs.m === "boolean"
         ? parsedArgs.m
-        : !!await vars.g.get(
-          denops,
-          "gyazo_insert_markdown_url",
-          0,
-        );
+        : !!(await vars.g.get(denops, "gyazo_insert_markdown_url", 0));
 
       if (parsedArgs._.length > 0) {
-        filePath = parsedArgs._.join("").replace(/^~/, homePath);
+        filePath = parsedArgs._.join(" ").replace(/^~/, homePath);
       }
 
-      const image = await readAll(
-        (filePath == undefined)
-          ? await clippy.read_image()
-          : await Deno.open(filePath),
-      );
-      const imageBlob = new Blob([image]);
+      const image = filePath == undefined
+        ? await clippy.readImage()
+        : await Deno.readFile(filePath);
+      const imageBlob = new Blob([image.buffer]);
 
       const formData = new FormData();
       formData.append("imagedata", imageBlob);
